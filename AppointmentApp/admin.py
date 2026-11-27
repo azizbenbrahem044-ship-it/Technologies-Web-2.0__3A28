@@ -13,7 +13,7 @@ class AppointmentStacked(admin.StackedInline):
     readonly_fields = ("created_at", "updated_at")
 
 
-class AppointmentPatientInline(admin.StackedInline):
+class AppointmentInline(admin.StackedInline):
     model = Appointment
     fk_name = "patient"
     extra = 0
@@ -48,7 +48,7 @@ class DateRangeFilter(admin.SimpleListFilter):
 
 
 @admin.register(Appointment)
-class AppointmentAdminPers(admin.ModelAdmin):
+class AppointmentAdmin(admin.ModelAdmin):
     list_display = (
         "appointment_date",
         "doctor_name",
@@ -58,6 +58,7 @@ class AppointmentAdminPers(admin.ModelAdmin):
     )
     list_filter = ("status", "doctor", DateRangeFilter)
     list_editable = ("status",)
+    autocomplete_fields = ("doctor", "patient")
     search_fields = (
         "patient__last_name",
         "patient__first_name",
@@ -67,7 +68,7 @@ class AppointmentAdminPers(admin.ModelAdmin):
         "doctor__license_number",
     )
     ordering = ("-appointment_date",)
-    list_per_page = 2
+    list_per_page = 10
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         ("Participants", {"fields": ("doctor", "patient")}),
@@ -88,12 +89,12 @@ class AppointmentAdminPers(admin.ModelAdmin):
     def patient_name(self, obj):
         return obj.patient.get_full_name() or obj.patient.username
 
-    @admin.action(description="make them confirmed")
+    @admin.action(description="Confirmer les rendez-vous sélectionnés")
     def confirm_selected(self, request, queryset):
         updated = queryset.update(status=Appointment.Status.CONFIRMED)
         self.message_user(request, f"{updated} rendez-vous confirmé(s).")
 
     @admin.action(description="Annuler les rendez-vous sélectionnés")
     def cancel_selected(self, request, queryset):
-        updated = queryset.update(status=Appointment.Status.CANCELED)
+        updated = queryset.update(status=Appointment.Status.CANCELLED)
         self.message_user(request, f"{updated} rendez-vous annulé(s).")

@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.db.models import Sum
+from django.utils import timezone
 
-from AppointmentApp.admin import AppointmentPatientInline, AppointmentStacked
+from AppointmentApp.admin import AppointmentInline, AppointmentStacked
+from AppointmentApp.models import Appointment
 
 from .models import Doctor, Patient, Speciality, User
 
@@ -15,7 +18,13 @@ class SpecialityAdmin(admin.ModelAdmin):
 
 @admin.register(Doctor)
 class DoctorAdmin(admin.ModelAdmin):
-    list_display = ("last_name", "first_name", "license_number", "phone")
+    list_display = (
+        "last_name",
+        "first_name",
+        "license_number",
+        "phone",
+        "today_confirmed_duration",
+    )
     list_filter = ("specialities",)
     search_fields = (
         "license_number",
@@ -23,6 +32,7 @@ class DoctorAdmin(admin.ModelAdmin):
         "first_name",
     )
     ordering = ("last_name",)
+    filter_horizontal = ("specialities",)
     fieldsets = (
         (
             "Compte",
@@ -43,6 +53,20 @@ class DoctorAdmin(admin.ModelAdmin):
         ("Médecin", {"fields": ("license_number", "phone", "specialities")}),
     )
     inlines = [AppointmentStacked]
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("license_number",) if obj else ()
+
+    @admin.display(description="Durée confirmée du jour (min)")
+    def today_confirmed_duration(self, obj):
+        total = (
+            obj.appointments.filter(
+                status=Appointment.Status.CONFIRMED,
+                appointment_date__date=timezone.localdate(),
+            ).aggregate(total=Sum("duration_minutes"))["total"]
+            or 0
+        )
+        return total
 
 
 @admin.register(Patient)
@@ -79,7 +103,10 @@ class PatientAdmin(admin.ModelAdmin):
         ),
         ("Patient", {"fields": ("national_id", "phone", "birth_date")}),
     )
-    inlines = [AppointmentPatientInline]
+    inlines = [AppointmentInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("national_id",) if obj else ()
 
 
 @admin.register(User)

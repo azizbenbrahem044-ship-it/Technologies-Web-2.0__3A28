@@ -3,18 +3,20 @@ from django.db.models import CASCADE
 from AccountApp.models import Doctor, Patient
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 
 
 class Appointment(models.Model):
     class Status(models.TextChoices):
-        PENDING = "PENDING", "en attente"
-        CONFIRMED = "CONFIRMED", "confirmé"
-        CANCELED = "CANCELED", "annulé"
+        PENDING = "PENDING", "En attente"
+        CONFIRMED = "CONFIRMED", "Confirmé"
+        CANCELLED = "CANCELLED", "Annulé"
 
     reason = models.TextField()
     prescription = models.FileField(
         blank=True,
-        upload_to='prescriptions/'
+        upload_to='prescriptions/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
     )
     status = models.CharField(
         max_length=10,
@@ -53,15 +55,18 @@ class Appointment(models.Model):
             and self.appointment_date
             and self.appointment_date <= timezone.now()
         ):
-            raise ValidationError("Appointment date cannot be in the past.")
+            raise ValidationError(
+                {"appointment_date": "Appointment date cannot be in the past."}
+            )
 
     def __str__(self):
         patient = self.patient.get_full_name() or self.patient.username
         doctor = self.doctor.get_full_name() or self.doctor.username
-        return f"Rendez-vous de {patient} avec Dr {doctor} le {self.appointment_date:%d/%m/%Y %H:%M}"
+        date_str = f"{self.appointment_date:%d/%m/%Y %H:%M}" if self.appointment_date else ""
+        return f"Rendez-vous de {patient} avec Dr {doctor} le {date_str}"
 
     class Meta:
-        ordering = ['-appointment_date']
+        ordering = ['appointment_date']
         constraints = [
             models.UniqueConstraint(
                 fields=['doctor', 'appointment_date'],

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 number_validator = RegexValidator(
     regex=r'^\d{8}$',
-    message='this number must contrain 8 digits',
+    message='this number must contain 8 digits',
 )
 
 
@@ -29,6 +29,9 @@ class Speciality(models.Model):
         verbose_name = "Speciality"
         verbose_name_plural = "Specialities"
 
+    def __str__(self):
+        return self.name
+
 class Doctor(User):
     user = models.OneToOneField(
         User,
@@ -44,7 +47,7 @@ class Doctor(User):
         unique=True,
         validators=[MinLengthValidator(6), MaxLengthValidator(6)],
     )
-    phone = models.CharField(max_length=8)
+    phone = models.CharField(max_length=8, validators=[number_validator])
     created_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
     specialities = models.ManyToManyField(
@@ -55,6 +58,9 @@ class Doctor(User):
     class Meta:
         verbose_name = "doctor"
         verbose_name_plural = "doctors"
+
+    def __str__(self):
+        return f"Dr {self.get_full_name() or self.username}"
 
 
 
@@ -81,3 +87,6 @@ class Patient(User):
     class Meta:
         verbose_name = "patient"
         verbose_name_plural = "patients"
+
+    def __str__(self):
+        return self.get_full_name() or self.username
